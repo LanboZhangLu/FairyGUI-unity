@@ -1,9 +1,14 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Text;
-using System.Text.RegularExpressions;
 using UnityEngine;
+using System.Text;
 using FairyGUI.Utils;
+using System.Collections.Generic;
+using System.Text.RegularExpressions;
+
+#if FAIRYGUI_INPUT_SYSTEM
+using UnityEngine.InputSystem;
+using UnityEngine.InputSystem.LowLevel;
+#endif
 
 namespace FairyGUI
 {
@@ -13,7 +18,7 @@ namespace FairyGUI
     public class InputTextField : RichTextField
     {
         /// <summary>
-        /// 
+        ///
         /// </summary>
         public int maxLength { get; set; }
 
@@ -24,37 +29,37 @@ namespace FairyGUI
         public bool keyboardInput { get; set; }
 
         /// <summary>
-        /// 
+        ///
         /// </summary>
         public int keyboardType { get; set; }
 
         /// <summary>
-        /// 
+        ///
         /// </summary>
         public bool hideInput { get; set; }
 
         /// <summary>
-        /// 
+        ///
         /// </summary>
         public bool disableIME { get; set; }
 
         /// <summary>
-        /// 
+        ///
         /// </summary>
         public bool mouseWheelEnabled { get; set; }
 
         /// <summary>
-        /// 
+        ///
         /// </summary>
         public static Action<InputTextField, string> onCopy;
 
         /// <summary>
-        /// 
+        ///
         /// </summary>
         public static Action<InputTextField> onPaste;
 
         /// <summary>
-        /// 
+        ///
         /// </summary>
         public static PopupMenu contextMenu;
 
@@ -119,7 +124,7 @@ namespace FairyGUI
         }
 
         /// <summary>
-        /// 
+        ///
         /// </summary>
         public EventListener onChanged
         {
@@ -127,7 +132,7 @@ namespace FairyGUI
         }
 
         /// <summary>
-        /// 
+        ///
         /// </summary>
         public EventListener onSubmit
         {
@@ -135,7 +140,7 @@ namespace FairyGUI
         }
 
         /// <summary>
-        /// 
+        ///
         /// </summary>
         public override string text
         {
@@ -152,7 +157,7 @@ namespace FairyGUI
         }
 
         /// <summary>
-        /// 
+        ///
         /// </summary>
         public override TextFormat textFormat
         {
@@ -172,7 +177,7 @@ namespace FairyGUI
         }
 
         /// <summary>
-        /// 
+        ///
         /// </summary>
         public string restrict
         {
@@ -188,7 +193,7 @@ namespace FairyGUI
         }
 
         /// <summary>
-        /// 
+        ///
         /// </summary>
         public int caretPosition
         {
@@ -214,7 +219,7 @@ namespace FairyGUI
         }
 
         /// <summary>
-        /// 
+        ///
         /// </summary>
         public string promptText
         {
@@ -234,7 +239,7 @@ namespace FairyGUI
         }
 
         /// <summary>
-        /// 
+        ///
         /// </summary>
         public bool displayAsPassword
         {
@@ -250,7 +255,7 @@ namespace FairyGUI
         }
 
         /// <summary>
-        /// 
+        ///
         /// </summary>
         public bool editable
         {
@@ -264,7 +269,7 @@ namespace FairyGUI
         }
 
         /// <summary>
-        /// 
+        ///
         /// </summary>
         public int border
         {
@@ -277,7 +282,7 @@ namespace FairyGUI
         }
 
         /// <summary>
-        /// 
+        ///
         /// </summary>
         public int corner
         {
@@ -290,7 +295,7 @@ namespace FairyGUI
         }
 
         /// <summary>
-        /// 
+        ///
         /// </summary>
         public Color borderColor
         {
@@ -303,7 +308,7 @@ namespace FairyGUI
         }
 
         /// <summary>
-        /// 
+        ///
         /// </summary>
         public Color backgroundColor
         {
@@ -337,7 +342,7 @@ namespace FairyGUI
         }
 
         /// <summary>
-        /// 
+        ///
         /// </summary>
         /// <param name="start"></param>
         /// <param name="length">-1 means the rest count from start</param>
@@ -360,7 +365,7 @@ namespace FairyGUI
         }
 
         /// <summary>
-        /// 
+        ///
         /// </summary>
         /// <param name="value"></param>
         public void ReplaceSelection(string value)
@@ -426,7 +431,7 @@ namespace FairyGUI
         }
 
         /// <summary>
-        /// 
+        ///
         /// </summary>
         /// <param name="value"></param>
         public void ReplaceText(string value)
@@ -557,12 +562,12 @@ namespace FairyGUI
             else
                 textField.text = _text;
 
-            _composing = Input.compositionString.Length;
+            _composing = compositionString.Length;
             if (_composing > 0)
             {
                 StringBuilder buffer = new StringBuilder();
                 GetPartialText(0, _caretPosition, buffer);
-                buffer.Append(Input.compositionString);
+                buffer.Append(compositionString);
                 GetPartialText(_caretPosition, -1, buffer);
 
                 textField.text = buffer.ToString();
@@ -637,7 +642,7 @@ namespace FairyGUI
         {
             TextField.CharPosition cp;
             if (_editing)
-                cp = GetCharPosition(_caretPosition + Input.compositionString.Length);
+                cp = GetCharPosition(_caretPosition + compositionString.Length);
             else
                 cp = GetCharPosition(_caretPosition);
 
@@ -671,17 +676,22 @@ namespace FairyGUI
                 {
                     Vector2 cursorPos = _caret.LocalToWorld(new Vector2(0, _caret.height));
                     cursorPos = StageCamera.main.WorldToScreenPoint(cursorPos);
-#if !UNITY_2019_OR_NEWER
-                    if (Stage.devicePixelRatio == 1)
+
+                    if (Application.platform == RuntimePlatform.WindowsPlayer
+                        || Application.platform == RuntimePlatform.WindowsEditor)
                     {
+                        cursorPos.y = Screen.height - cursorPos.y + 20;
+#if UNITY_EDITOR
+                        cursorPos.y += 50;
 #endif
-                        cursorPos.y = Screen.height - cursorPos.y;
-                        cursorPos = cursorPos / Stage.devicePixelRatio;
-                        Input.compositionCursorPos = cursorPos + new Vector2(0, 20);
-#if !UNITY_2019_OR_NEWER
                     }
-                    else
-                        Input.compositionCursorPos = cursorPos - new Vector2(0, 20);
+
+#if FAIRYGUI_INPUT_SYSTEM
+                    Keyboard keyboard = Keyboard.current;
+                    if (keyboard != null)
+                        keyboard.SetIMECursorPosition(cursorPos);
+#else
+                    Input.compositionCursorPos = cursorPos;
 #endif
                 }
 
@@ -739,7 +749,7 @@ namespace FairyGUI
             }
 
             TextField.CharPosition start;
-            if (_editing && Input.compositionString.Length > 0)
+            if (_editing && compositionString.Length > 0)
             {
                 if (_selectionStart < _caretPosition)
                 {
@@ -747,7 +757,7 @@ namespace FairyGUI
                     start = GetCharPosition(_selectionStart);
                 }
                 else
-                    start = GetCharPosition(_selectionStart + Input.compositionString.Length);
+                    start = GetCharPosition(_selectionStart + compositionString.Length);
             }
             else
                 start = GetCharPosition(_selectionStart);
@@ -818,7 +828,12 @@ namespace FairyGUI
                         return v;
                 }
                 else if (firstInLine != -1)
-                    return v;
+                {
+                    if (textField.parsedText[i - 1] == '\n')
+                        return textField.charPositions[i - 1];
+                    else
+                        return v;
+                }
             }
 
             return textField.charPositions[i - 1];
@@ -925,16 +940,8 @@ namespace FairyGUI
                 return;
             }
 
-#if UNITY_WEBPLAYER || UNITY_WEBGL || UNITY_STANDALONE_WIN || UNITY_STANDALONE_OSX || UNITY_EDITOR
-            TextEditor textEditor = new TextEditor();
-#if UNITY_5_3_OR_NEWER
-            textEditor.text = value;
-#else
-            textEditor.content = new GUIContent(value);
-#endif
-            textEditor.OnFocus();
-            textEditor.Copy();
-#endif
+
+            GUIUtility.systemCopyBuffer = value;
         }
 
         void DoPaste()
@@ -945,23 +952,9 @@ namespace FairyGUI
                 return;
             }
 
-#if UNITY_WEBPLAYER || UNITY_WEBGL || UNITY_STANDALONE_WIN || UNITY_STANDALONE_OSX || UNITY_EDITOR
-            TextEditor textEditor = new TextEditor();
-#if UNITY_5_3_OR_NEWER
-            textEditor.text = string.Empty;
-#else
-            textEditor.content = new GUIContent(string.Empty);
-#endif
-            textEditor.multiline = !textField.singleLine;
-            textEditor.Paste();
-#if UNITY_5_3_OR_NEWER
-            string value = textEditor.text;
-#else
-            string value = textEditor.content.text;
-#endif
+            string value = GUIUtility.systemCopyBuffer;
             if (!string.IsNullOrEmpty(value))
                 ReplaceSelection(value);
-#endif
         }
 
         void CreateCaret()
@@ -1077,10 +1070,16 @@ namespace FairyGUI
             }
             else
             {
+#if FAIRYGUI_INPUT_SYSTEM
+                Keyboard keyboard = Keyboard.current;
+                if (keyboard != null)
+                    keyboard.SetIMEEnabled(!disableIME && !_displayAsPassword);
+#else
                 if (!disableIME && !_displayAsPassword)
                     Input.imeCompositionMode = IMECompositionMode.On;
                 else
                     Input.imeCompositionMode = IMECompositionMode.Off;
+#endif
                 _composing = 0;
 
                 if ((string)context.data == "key") //select all if got focus by tab key
@@ -1103,7 +1102,13 @@ namespace FairyGUI
             }
             else
             {
+#if FAIRYGUI_INPUT_SYSTEM
+                Keyboard keyboard = Keyboard.current;
+                if (keyboard != null)
+                    keyboard.SetIMEEnabled(true);
+#else
                 Input.imeCompositionMode = IMECompositionMode.Auto;
+#endif
                 TextInputHistory.inst.StopRecord(this);
             }
 
@@ -1392,6 +1397,7 @@ namespace FairyGUI
                     return true;
                 }
 
+#if !FAIRYGUI_INPUT_SYSTEM
                 if (_editable)
                 {
                     if (char.IsLowSurrogate(c))
@@ -1399,32 +1405,35 @@ namespace FairyGUI
                     else
                         ReplaceSelection(c.ToString());
                 }
+#endif
 
                 return true;
             }
             else
-            {
-                if (Input.compositionString.Length > 0 && _editable)
-                {
-                    int composing = _composing;
-                    _composing = Input.compositionString.Length;
-
-                    StringBuilder buffer = new StringBuilder();
-                    GetPartialText(0, _caretPosition, buffer);
-                    buffer.Append(Input.compositionString);
-                    GetPartialText(_caretPosition + composing, -1, buffer);
-
-                    textField.text = buffer.ToString();
-                }
-
                 return keyCodeHandled;
-            }
         }
 
-        internal void CheckComposition()
+        void CheckComposition()
         {
-            if (_composing != 0 && Input.compositionString.Length == 0)
+            if (!_editable || keyboardInput)
+                return;
+
+            if (compositionString.Length == 0)
+            {
                 UpdateText();
+            }
+            else
+            {
+                int composing = _composing;
+                _composing = compositionString.Length;
+
+                StringBuilder buffer = new StringBuilder();
+                GetPartialText(0, _caretPosition, buffer);
+                buffer.Append(compositionString);
+                GetPartialText(_caretPosition + composing, -1, buffer);
+
+                textField.text = buffer.ToString();
+            }
         }
 
         void __click(EventContext context)
@@ -1445,6 +1454,117 @@ namespace FairyGUI
                 contextMenu.Show();
             }
         }
+
+#if !FAIRYGUI_INPUT_SYSTEM
+        static bool _IMEActive;
+
+        public static bool EatKeyEvent(Event evt)
+        {
+            if (compositionString.Length > 0)
+            {
+                _IMEActive = true;
+
+                if (evt.rawType == EventType.KeyDown)
+                {
+                    var focus = Stage.inst.focus;
+                    if (focus is InputTextField)
+                        ((InputTextField)focus).CheckComposition();
+                }
+
+                return true;
+            }
+            else
+            {
+                if (_IMEActive && evt.keyCode != KeyCode.None)
+                {
+                    //需要吃掉最后一个按键，通常是选择候选词或者结束输入
+                    var focus = Stage.inst.focus;
+                    if (focus is InputTextField)
+                        ((InputTextField)focus).CheckComposition();
+                    return true;
+                }
+                _IMEActive = false;
+
+                return false;
+            }
+        }
+
+
+        public static string compositionString
+        {
+            get
+            {
+                if (Stage.keyboardInput)
+                    return String.Empty;
+
+                return Input.compositionString;
+            }
+        }
+
+#else
+        static string _compositionString = string.Empty;
+
+        public static void RegisterEvent()
+        {
+            Keyboard keyboard = Keyboard.current;
+            if (keyboard != null)
+            {
+                keyboard.onIMECompositionChange -= OnIMECompositionChange;
+                keyboard.onIMECompositionChange += OnIMECompositionChange;
+                keyboard.onTextInput -= OnTextInput;
+                keyboard.onTextInput += OnTextInput;
+            }
+        }
+
+        public static void UnregisterEvent()
+        {
+            Keyboard keyboard = Keyboard.current;
+            if (keyboard != null)
+            {
+                keyboard.onIMECompositionChange -= OnIMECompositionChange;
+                keyboard.onTextInput -= OnTextInput;
+            }
+        }
+
+        public static bool EatKeyEvent(Event evt)
+        {
+            return compositionString.Length > 0;
+        }
+
+        static void OnIMECompositionChange(IMECompositionString composition)
+        {
+            if (Stage.keyboardInput)
+                return;
+
+            _compositionString = composition.ToString();
+            var focus = Stage.inst.focus;
+            if (focus is InputTextField)
+                ((InputTextField)focus).CheckComposition();
+        }
+
+        static void OnTextInput(char c)
+        {
+            var focus = Stage.inst.focus;
+            if ((focus is InputTextField) && ((InputTextField)focus).editable && !((InputTextField)focus).keyboardInput)
+                ((InputTextField)focus).ReplaceSelection(c.ToString());
+        }
+
+        /// <summary>
+        /// The current IME composition string being typed by the user.
+        /// </summary>
+        public static string compositionString
+        {
+            get
+            {
+                if (Stage.keyboardInput)
+                    return String.Empty;
+
+                return _compositionString;
+            }
+        }
+
+#endif
+
     }
 
     class TextInputHistory
